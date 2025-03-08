@@ -1,6 +1,6 @@
-# Ursina 3D Game Project  
+# Ursina Oasis Project  
 
-## Setup Instructions (Windows)  
+## Setup Instructions  
 
 ### 1. Install Dependencies  
 You'll need **Python 3.8+** and **Ursina**. If you don’t have Python, grab it from [python.org](https://www.python.org/downloads/).  
