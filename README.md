@@ -24,7 +24,6 @@ Just hit **Run** on `main.py`
 
 ## Running in Bash
 ```bash
-python -m venv venv
 venv\Scripts\activate
 pip install ursina
 python main.py
