@@ -118,16 +118,27 @@ class Animal(LivingThing):
         self.look_target = None
         self.update_attributes()
 
-        # Eye initialization
+        # Eye initialization (with names so update_eyes can find them)
         eye_scale = 0.3
         eye_y_offset = 0.6
         eye_x_offset = 0.15
         for side, x_offset in [(-1, -eye_x_offset), (1, eye_x_offset)]:
             eye_pos = self.validate_position(Vec3(x_offset, eye_y_offset, 0.5))
-            eye = Entity(parent=self, model='sphere', color=color.white,
-                         scale=eye_scale, position=eye_pos)
-            Entity(parent=eye, model='sphere', color=color.black,
-                   scale=0.5, position=Vec3(0, 0, 0.35))
+            eye = Entity(
+                name=f'eye_{side}',  # Add a name that includes "eye"
+                parent=self,
+                model='sphere',
+                color=color.white,
+                scale=eye_scale,
+                position=eye_pos
+            )
+            Entity(
+                parent=eye,
+                model='sphere',
+                color=color.black,
+                scale=0.5,
+                position=Vec3(0, 0, 0.35)
+            )
 
     def validate_position(self, pos):
         if any(math.isnan(v) or abs(v) > self.POSITION_LIMIT for v in pos):

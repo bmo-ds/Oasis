@@ -116,11 +116,20 @@ ground = Entity(
 player.position = Vec3(0, 30, 0)
 
 # Function to get terrain height at any point (matches generate_terrain)
-def get_terrain_height(x, z, height_scale):
-    height1 = math.sin(x * 0.01) * math.cos(z * 0.01) * height_scale
-    height2 = math.sin(x * 0.03 + 1.0) * math.cos(z * 0.03 + 2.0) * height_scale * 0.3
-    return height1 + height2
+# Precompute terrain heights using a 2D list
+terrain_heights = [[0] * WORLD_SIZE for _ in range(WORLD_SIZE)]
 
+for x in range(WORLD_SIZE):
+    for z in range(WORLD_SIZE):
+        height1 = math.sin(x * 0.01) * math.cos(z * 0.01) * height_scale
+        height2 = math.sin(x * 0.03 + 1.0) * math.cos(z * 0.03 + 2.0) * height_scale * 0.3
+        terrain_heights[x][z] = height1 + height2
+
+def get_terrain_height(x, z, height_scale):
+    # Convert world coordinates to array indices
+    ix = int(x + WORLD_SIZE / 2) % WORLD_SIZE
+    iz = int(z + WORLD_SIZE / 2) % WORLD_SIZE
+    return terrain_heights[ix][iz]
 
 # Spawn entities on terrain surface
 trees = [Tree(position=Vec3(
@@ -212,11 +221,15 @@ def update():
     game_start_time += time.dt * LivingThing.time_scale
     normalized_time = (game_start_time % 86400) / 86400.0
     angle_degrees = normalized_time * 360 - 90
-    radians = math.radians(angle_degrees)
-    radius = 50
+    angle_radians = math.radians((game_start_time % 86400) / 86400.0 * 360 - 90)
+    cos_a, sin_a = math.cos(angle_radians), math.sin(angle_radians)
+
     day_progress = game_start_time / 86400.0
+    radius = 50
     sun_z = math.sin(day_progress * 2 * math.pi / 365) * 30
-    sun.position = Vec3(radius * math.cos(radians), radius * math.sin(radians), sun_z)
+    sun.position = Vec3(radius * cos_a, radius * sin_a, sun_z)
+
+    # sun.position = Vec3(radius * math.cos(radians), radius * math.sin(radians), sun_z)
     sun.look_at(Vec3(0, 0, 0))
 
     current_angle = math.atan2(sun.position.y, sun.position.x)

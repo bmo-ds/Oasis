@@ -11,7 +11,8 @@ from SkyShaders import sky_shader_full
 
 app = Ursina()
 
-WORLD_SIZE = 1000
+WORLD_SIZE = 100
+player_radius = 50
 
 LivingThing.entity_grid = {}
 LivingThing.time_scale = 1.0
@@ -32,9 +33,15 @@ ground = Entity(
     shader=lit_with_shadows_shader
 )
 
-trees = [Tree(position=Vec3(random.uniform(-WORLD_SIZE, WORLD_SIZE), 0, random.uniform(-WORLD_SIZE, WORLD_SIZE)), shader=lit_with_shadows_shader) for _ in range(8)]
-animals = ([Animal(position=Vec3(random.uniform(-WORLD_SIZE, WORLD_SIZE), 0, random.uniform(-WORLD_SIZE, WORLD_SIZE)), animal_type='prey', shader=lit_with_shadows_shader) for _ in range(6)] +
-           [Animal(position=Vec3(random.uniform(-WORLD_SIZE, WORLD_SIZE), 0, random.uniform(-WORLD_SIZE, WORLD_SIZE)), animal_type='predator', shader=lit_with_shadows_shader) for _ in range(2)])
+# trees = [Tree(position=Vec3(random.uniform(-WORLD_SIZE, WORLD_SIZE), 0, random.uniform(-WORLD_SIZE, WORLD_SIZE)), shader=lit_with_shadows_shader) for _ in range(8)]
+# animals = ([Animal(position=Vec3(random.uniform(-WORLD_SIZE, WORLD_SIZE), 0, random.uniform(-WORLD_SIZE, WORLD_SIZE)), animal_type='prey', shader=lit_with_shadows_shader) for _ in range(6)] +
+#            [Animal(position=Vec3(random.uniform(-WORLD_SIZE, WORLD_SIZE), 0, random.uniform(-WORLD_SIZE, WORLD_SIZE)), animal_type='predator', shader=lit_with_shadows_shader) for _ in range(2)])
+
+
+trees = [Tree(position=Vec3(random.uniform(-player_radius, player_radius), 0, random.uniform(-player_radius, player_radius)), shader=lit_with_shadows_shader) for _ in range(8)]
+animals = ([Animal(position=Vec3(random.uniform(-player_radius, player_radius), 0, random.uniform(-player_radius, player_radius)), animal_type='prey', shader=lit_with_shadows_shader) for _ in range(6)] +
+           [Animal(position=Vec3(random.uniform(-player_radius, player_radius), 0, random.uniform(-player_radius, player_radius)), animal_type='predator', shader=lit_with_shadows_shader) for _ in range(2)])
+
 
 sun = DirectionalLight(
     shadows=True,
@@ -77,15 +84,33 @@ def spawn_new():
     global trees, animals
     trees = [t for t in trees if not t.destroyed]
     animals = [a for a in animals if not a.destroyed]
-    if random.random() < 0.05:
-        new_tree = Tree(Vec3(random.uniform(-WORLD_SIZE, WORLD_SIZE), 0, random.uniform(-WORLD_SIZE, WORLD_SIZE)), shader=lit_with_shadows_shader)
+
+    spawn_radius = 50  # Define spawn area around the player
+    px, pz = player.x, player.z  # Get player position (y is ignored)
+
+    if random.random() < 0.1:
+        new_tree = Tree(
+            Vec3(px + random.uniform(-spawn_radius, spawn_radius), 0, pz + random.uniform(-spawn_radius, spawn_radius)),
+            shader=lit_with_shadows_shader
+        )
         trees.append(new_tree)
-    if random.random() < 0.03:
-        new_prey = Animal(position=Vec3(random.uniform(-WORLD_SIZE, WORLD_SIZE), 0, random.uniform(-WORLD_SIZE, WORLD_SIZE)), animal_type='prey', shader=lit_with_shadows_shader)
+
+    if random.random() < 0.05:
+        new_prey = Animal(
+            position=Vec3(px + random.uniform(-spawn_radius, spawn_radius), 0, pz + random.uniform(-spawn_radius, spawn_radius)),
+            animal_type='prey',
+            shader=lit_with_shadows_shader
+        )
         animals.append(new_prey)
-    if random.random() < 0.005:
-        new_predator = Animal(position=Vec3(random.uniform(-WORLD_SIZE, WORLD_SIZE), 0, random.uniform(-WORLD_SIZE, WORLD_SIZE)), animal_type='predator', shader=lit_with_shadows_shader)
+
+    if random.random() < 0.02:
+        new_predator = Animal(
+            position=Vec3(px + random.uniform(-spawn_radius, spawn_radius), 0, pz + random.uniform(-spawn_radius, spawn_radius)),
+            animal_type='predator',
+            shader=lit_with_shadows_shader
+        )
         animals.append(new_predator)
+
 
 def update_entity_grid():
     LivingThing.entity_grid = {k: v for k, v in LivingThing.entity_grid.items() if v[2]}
@@ -117,6 +142,9 @@ def update():
                         radius * math.sin(radians),
                         sun_z)
     sun.look_at(Vec3(0, 0, 0))
+
+    # Disable shadows when the sun is below the horizon
+    sun.shadows = sun.position.y > 10
 
     # Now derive the displayed time directly from the sun's horizontal angle.
     # Calculate the angle of the sun's position in the x-y plane relative to the origin.
