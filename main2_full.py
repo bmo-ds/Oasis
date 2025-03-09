@@ -18,7 +18,7 @@ LivingThing.entity_grid = {}
 LivingThing.time_scale = 1.0
 LivingThing.default_shader = lit_with_shadows_shader
 
-game_start_time = 9000  # Start time: ex. 10 AM (36,000 seconds)
+game_start_time = 42000  # Start time: ex. 10 AM (36,000 seconds)
 
 player = FirstPersonController(model=Cone())
 player.cursor.model = None
@@ -104,7 +104,7 @@ def generate_terrain(size, subdivisions, height_scale):
 
 # Create the terrain
 ground = Entity(
-    model=generate_terrain(WORLD_SIZE, subdivisions=50, height_scale=height_scale),
+    model=generate_terrain(WORLD_SIZE, subdivisions=25, height_scale=height_scale),
     collider='mesh',
     texture='grass',
     double_sided=True,  # Render both sides of each triangle.
@@ -160,7 +160,7 @@ animals = (
 
 sun = DirectionalLight(
     shadows=True,
-    shadow_map_resolution=(4096, 4096),
+    shadow_map_resolution=(4096*2, 4096*2),
     shadow_area=WORLD_SIZE
 )
 sun.position = Vec3(50, 100, 50)
@@ -176,9 +176,15 @@ time_scale_text = Text(text=f'Time Scale: {LivingThing.time_scale:.1f}', positio
                        scale=1)
 game_time_text = Text(text='Game Time: d:00:00:00', position=(-0.45, -0.45), origin=(-0.5, -0.5), scale=1)
 
+# Normal speed and sprint speed
+normal_speed = 5
+sprint_speed = 10
+player.speed = normal_speed
+
 
 def input(key):
     global LivingThing
+
     if key == 'p':
         LivingThing.time_scale = 0
     elif key == 'up arrow':
@@ -196,6 +202,10 @@ def input(key):
         LivingThing.time_scale = min(LivingThing.time_scale + increment, 100000)
     elif key == 'escape':
         application.quit()
+    if held_keys['shift']:  # Check if left shift is held
+        player.speed = sprint_speed  # Increase speed when holding shift
+    else:
+        player.speed = normal_speed  # Reset to normal speed when shift is released
 
 
 def spawn_new():
