@@ -7,6 +7,7 @@ from ursina.shaders import lit_with_shadows_shader
 
 # Import modular components
 from LivingThings import LivingThing, Tree, Animal
+from SkyShaders import sky_shader_full
 
 app = Ursina()
 
@@ -20,7 +21,7 @@ current_time = datetime.datetime.now()
 game_time = (current_time.hour * 3600) + (current_time.minute * 60) + current_time.second
 game_start_time = game_time
 
-player = FirstPersonController(model=Circle())
+player = FirstPersonController(model=Cone())
 player.cursor.model = None
 player.shader = lit_with_shadows_shader  # Fix: Add shadow casting to player
 
@@ -42,14 +43,16 @@ sun = DirectionalLight(
     shadow_map_resolution=(4096, 4096),
     shadow_area=WORLD_SIZE
 )
-
 sun.position = Vec3(50, 100, 50)  # Temporary static position for testing
 sun.look_at(Vec3(0, 0, 0))  # Ensure it points at origin
 
 sun_model = Entity(model='sphere', scale=1, color=color.yellow)
 sun_model.unlit = True
 
-sky = Sky(texture="sky_default")
+sun_scale = 0.5
+sky = Sky(shader=sky_shader_full)
+sky.set_shader_input('resolution', Vec2(window.fullscreen_size[0], window.fullscreen_size[1]))
+sky.set_shader_input('sun_size', sun_scale * 0.1)
 
 time_scale_text = Text(text=f'Time Scale: {LivingThing.time_scale:.1f}', position=(0.01, -0.02), scale=0.05)
 game_time_text = Text(text='Game Time: d:00:00:00', position=(0.01, -0.021), scale=0.05)
@@ -108,14 +111,8 @@ def update():
     seconds = total_seconds % 60
     game_time_text.text = f'Game Time: {days:02d}d:{hours:02d}:{minutes:02d}:{seconds:02d}'
 
-    # Comment out dynamic sun movement for testing
-    # time_of_day = (game_start_time / 86400) * 360
-    # sun_x = 0
-    # sun_z = math.cos(math.radians(time_of_day)) * 100
-    # sun_y = math.sin(math.radians(time_of_day)) * 100
-    # sun.position = Vec3(sun_x, sun_y, sun_z)
-    # sun.look_at(Vec3(0, 0, 0))
-    # sun_model.position = Vec3(sun_x, sun_y, sun_z)
-    # sun_model.enabled = sun_y > 0
+    sky.set_shader_input('sun_position', sun.position)
+    sky.set_shader_input('time', game_start_time)
+    sky.set_shader_input('sun_size', sun_scale * 0.1)
 
 app.run()
