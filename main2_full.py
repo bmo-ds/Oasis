@@ -1,37 +1,38 @@
 import math
 import random
 import datetime
+import time
 from ursina import *
 from ursina.prefabs.first_person_controller import FirstPersonController
 from ursina.shaders import lit_with_shadows_shader
 
 # Import modular components
-# from LivingThings import LivingThing, Tree, Animal
-from Scratch.livingthings_noshadows import LivingThing, Tree, Animal
+from LivingThings import LivingThing, Tree, Animal
 from SkyShaders import sky_shader_full
 
 app = Ursina()
 
 WORLD_SIZE = 500
-height_scale = 3
+height_scale = 4
 
 LivingThing.entity_grid = {}
 LivingThing.time_scale = 1.0
 LivingThing.default_shader = lit_with_shadows_shader
 
 game_start_time = 42000  # Start time in seconds (e.g., ~11:40 AM)
+last_spawn_time = time.time()  # Initialize spawn lockout timer
 
 player = FirstPersonController(model=Cone(), collider='capsule')
 player.cursor.model = None
 player.shader = lit_with_shadows_shader
 
-# Terrain generation function with smooth height and secondary noise.
+# Terrain generation function with smooth height and secondary noise
 def generate_terrain(size, subdivisions, height_scale):
     vertices = []
     triangles = []
     uvs = []
 
-    # Generate vertices with two layers of height variation.
+    # Generate vertices with two layers of height variation
     for x in range(subdivisions + 1):
         for z in range(subdivisions + 1):
             pos_x = (x / subdivisions - 0.5) * size
@@ -55,10 +56,10 @@ def generate_terrain(size, subdivisions, height_scale):
                 i + 1, i + subdivisions + 2, i + subdivisions + 1
             ])
 
-    # Compute vertex normals manually.
+    # Compute vertex normals manually
     normals = [Vec3(0, 0, 0) for _ in vertices]
 
-    # Loop over each triangle and accumulate face normals.
+    # Loop over each triangle and accumulate face normals
     for i in range(0, len(triangles), 3):
         i1 = triangles[i]
         i2 = triangles[i + 1]
@@ -87,7 +88,7 @@ def generate_terrain(size, subdivisions, height_scale):
         normals[i2] += face_normal
         normals[i3] += face_normal
 
-    # Normalize all vertex normals.
+    # Normalize all vertex normals
     for i, n in enumerate(normals):
         mag = math.sqrt(n.x**2 + n.y**2 + n.z**2)
         if mag != 0:
@@ -98,9 +99,9 @@ def generate_terrain(size, subdivisions, height_scale):
     terrain_mesh = Mesh(vertices=vertices, triangles=triangles, uvs=uvs, normals=normals, mode='triangle')
     return terrain_mesh
 
-# Create the terrain.
+# Create the terrain with reduced subdivisions
 ground = Entity(
-    model=generate_terrain(WORLD_SIZE, subdivisions=25, height_scale=height_scale),
+    model=generate_terrain(WORLD_SIZE, subdivisions=15, height_scale=height_scale),  # Reduced from 25 to 10
     collider='mesh',
     texture='grass',
     double_sided=True,
@@ -110,7 +111,7 @@ ground = Entity(
 
 player.position = Vec3(0, 30, 0)
 
-# Precompute terrain heights using a 2D list.
+# Precompute terrain heights using a 2D list
 terrain_heights = [[0] * WORLD_SIZE for _ in range(WORLD_SIZE)]
 for x in range(WORLD_SIZE):
     for z in range(WORLD_SIZE):
@@ -121,45 +122,25 @@ for x in range(WORLD_SIZE):
         terrain_heights[x][z] = height1 + height2
 
 def get_terrain_height(x, z, height_scale):
-    ix = int(x + 250)
-    iz = int(z + 250)
-    ix = max(0, min(ix, 499))
-    iz = max(0, min(iz, 499))
-    return terrain_heights[ix][iz]
+    # Calculate height dynamically using the same formula as in terrain generation
+    height1 = math.sin(x * 0.01) * math.cos(z * 0.01) * height_scale
+    height2 = math.sin(x * 0.03 + 1.0) * math.cos(z * 0.03 + 2.0) * height_scale * 0.3
+    return height1 + height2
 
-# Limit the total number of spawned entities.
-MAX_TREES = 50
-MAX_ANIMALS = 50
+trees = []
+animals = []
 
-trees = [Tree(position=Vec3(
-                x := random.uniform(-250, 250 - 1e-6),
-                get_terrain_height(x, z := random.uniform(-250, 250 - 1e-6), height_scale),
-                z),
-              shader=lit_with_shadows_shader) for _ in range(18)]
-
-animals = (
-    [Animal(position=Vec3(random.uniform(-250, 250 - 1e-6),
-                         get_terrain_height(random.uniform(-250, 250 - 1e-6),
-                                            random.uniform(-250, 250 - 1e-6), height_scale),
-                         random.uniform(-250, 250 - 1e-6)),
-             animal_type='prey', shader=lit_with_shadows_shader) for _ in range(16)] +
-    [Animal(position=Vec3(random.uniform(-250, 250 - 1e-6),
-                         get_terrain_height(random.uniform(-250, 250 - 1e-6),
-                                            random.uniform(-250, 250 - 1e-6), height_scale),
-                         random.uniform(-250, 250 - 1e-6)),
-             animal_type='predator', shader=lit_with_shadows_shader) for _ in range(12)]
-)
-
-# Lower the shadow resolution for better performance.
+# Sun setup (unchanged)
 sun = DirectionalLight(
     shadows=True,
-    shadow_map_resolution=(2048, 2048),  # Reduced resolution.
+    shadow_map_resolution=(2048, 2048),
     shadow_area=WORLD_SIZE
 )
 sun.position = Vec3(50, 100, 50)
 sun.look_at(Vec3(0, 0, 0))
 sun.shadow_area = WORLD_SIZE * 2
 
+# Sky setup (unchanged)
 sky = Sky(shader=sky_shader_full)
 sky.set_shader_input('resolution', Vec2(window.fullscreen_size[0], window.fullscreen_size[1]))
 sky.set_shader_input('sun_size', 0.1 * 0.1)
@@ -170,8 +151,6 @@ game_time_text = Text(text='Game Time: d:00:00:00', position=(-0.45, -0.45), ori
 normal_speed = 5
 sprint_speed = 10
 player.speed = normal_speed
-
-last_spawn_time = 0  # Used to limit spawn frequency.
 
 def input(key):
     global LivingThing
@@ -198,39 +177,53 @@ def input(key):
         player.speed = normal_speed
 
 def spawn_new():
-    global trees, animals, last_spawn_time
-    # Limit spawns to every 0.5 seconds.
-    if time.time() - last_spawn_time < 0.5:
-        return
-    last_spawn_time = time.time()
-    if len(trees) < MAX_TREES and random.random() < 0.1:
-        x = random.uniform(-250, 250 - 1e-6)
-        z = random.uniform(-250, 250 - 1e-6)
-        y = get_terrain_height(x, z, height_scale)
-        new_tree = Tree(position=Vec3(x, y, z), shader=lit_with_shadows_shader)
-        trees.append(new_tree)
-    if len(animals) < MAX_ANIMALS:
-        if random.random() < 0.07:
-            x = random.uniform(-250, 250 - 1e-6)
-            z = random.uniform(-250, 250 - 1e-6)
-            y = get_terrain_height(x, z, height_scale)
-            new_prey = Animal(position=Vec3(x, y, z), animal_type='prey', shader=lit_with_shadows_shader)
-            animals.append(new_prey)
-        if random.random() < 0.01:
-            x = random.uniform(-250, 250 - 1e-6)
-            z = random.uniform(-250, 250 - 1e-6)
-            y = get_terrain_height(x, z, height_scale)
-            new_predator = Animal(position=Vec3(x, y, z), animal_type='predator', shader=lit_with_shadows_shader)
-            animals.append(new_predator)
+    global trees, animals
+    trees = [t for t in trees if not t.destroyed]
+    animals = [a for a in animals if not a.destroyed]
+
+    spawn_radius = 50  # Define spawn area around the player
+    px, pz = player.x, player.z  # Get player position (y is ignored)
+
+    def get_spawn_position():
+        """Returns a valid spawn position at terrain height"""
+        sx = px + random.uniform(-spawn_radius, spawn_radius)
+        sz = pz + random.uniform(-spawn_radius, spawn_radius)
+        sy = get_terrain_height(sx, sz, height_scale) + 0.5  # Slight offset to prevent sinking
+        return Vec3(sx, sy, sz)
+
+    if random.random() < 0.05:
+        trees.append(Tree(get_spawn_position(), shader=lit_with_shadows_shader))
+
+    if random.random() < 0.03:
+        animals.append(Animal(position=get_spawn_position(), animal_type='prey', shader=lit_with_shadows_shader))
+
+    if random.random() < 0.02:
+        animals.append(Animal(position=get_spawn_position(), animal_type='predator', shader=lit_with_shadows_shader))
 
 def update_entity_grid():
-    LivingThing.entity_grid = {k: v for k, v in LivingThing.entity_grid.items() if v[2]}
+    if any(e.enabled != LivingThing.entity_grid.get(e.grid_key, [None, None, False])[2] for e in trees + animals):
+        LivingThing.entity_grid = {k: v for k, v in LivingThing.entity_grid.items() if v[2]}
 
 def update():
-    global game_start_time, sun, sky
+    global game_start_time, sun, sky, last_spawn_time
     time_scale_text.text = f'Time Scale: {LivingThing.time_scale:.1f}'
-    spawn_new()
+
+    # Filter out destroyed entities every frame
+    trees[:] = [t for t in trees if not t.destroyed]
+    animals[:] = [a for a in animals if not a.destroyed]
+
+    # Spawn lockout: only spawn every 1 second
+    current_time = time.time()
+    if current_time - last_spawn_time > 0.05:
+        spawn_new()
+        last_spawn_time = current_time
+
     update_entity_grid()
+
+    # Distance-based culling: disable updates for entities far from player
+    for entity in trees + animals:
+        dist = distance(player.position, entity.position)
+        entity.enabled = dist < 100  # Only update entities within 100 units
 
     game_start_time += time.dt * LivingThing.time_scale
     normalized_time = (game_start_time % 86400) / 86400.0
@@ -242,7 +235,6 @@ def update():
     radius = 50
     sun_z = math.sin(day_progress * 2 * math.pi / 365) * 30
     sun.position = Vec3(radius * cos_a, radius * sin_a, sun_z)
-
     sun.look_at(Vec3(0, 0, 0))
 
     current_angle = math.atan2(sun.position.y, sun.position.x)
@@ -260,7 +252,7 @@ def update():
     sky.set_shader_input('time', game_start_time % 86400)
     sky.set_shader_input('sun_size', 0.1 * 0.1)
 
-    # Keep animals on the terrain.
+    # Keep animals on the terrain
     for animal in animals:
         if animal.enabled:
             animal.y = get_terrain_height(animal.x, animal.z, height_scale) + 0.5
