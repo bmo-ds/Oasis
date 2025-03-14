@@ -1,3 +1,4 @@
+import json
 import numpy as np
 
 """
@@ -53,13 +54,111 @@ Each species entry is an object with the following keys:
 """
 
 
+def convert_species_config_with_categorical(json_data):
+    """
+    Converts a JSON species configuration into a NumPy structured array while
+    converting categorical (string) fields into numeric codes for optimization.
+    Also extracts and stores geometry data in a separate dictionary.
+
+    Parameters:
+        json_data (dict): The JSON dictionary containing the 'species_grid' key.
+
+    Returns:
+        tuple: A tuple containing:
+            - np.ndarray: A NumPy structured array with the simulation data.
+            - dict: A dictionary mapping each categorical field to its code mapping.
+            - dict: A dictionary storing geometry/model data separately by species.
+    """
+    species_list = json_data.get("species_grid", [])
+
+    # Define categorical fields
+    string_fields = ['class', 'species', 'music_taste']
+
+    # Build mappings for categorical fields
+    mappings = {}
+    for field in string_fields:
+        unique_vals = {entry.get(field, "") for entry in species_list}
+        unique_vals = sorted(unique_vals)
+        mappings[field] = {val: idx for idx, val in enumerate(unique_vals)}
+
+    # Define structured dtype
+    dtype = np.dtype([
+        ('class', 'i4'),
+        ('species', 'i4'),
+        ('x', 'f4'), ('y', 'f4'), ('z', 'f4'),
+        ('hunger', 'f4'), ('water', 'f4'), ('sleep', 'f4'),
+        ('gender', 'f4'),
+        ('mood', 'f4', (4,)),
+        ('generation', 'i4'),
+        ('family_id', 'i4'),
+        ('energy', 'f4'),
+        ('age', 'i4'),
+        ('color1', 'f4', (3,)),
+        ('color2', 'f4', (3,)),
+        ('reproduction_rate', 'f4'),
+        ('aggression', 'f4'),
+        ('mutation_rate', 'f4'),
+        ('music_taste', 'i4')
+    ])
+
+    # Separate model data storage
+    model_data = {}
+
+    # Build the structured array
+    data = []
+    for entry in species_list:
+        species_name = entry.get("species", "Unknown")
+
+        # Store model/geometry data separately
+        if "geometry" in entry:
+            model_data[species_name] = entry["geometry"]
+
+        # Append numerical data for NumPy struct array
+        data.append((
+            mappings['class'].get(entry.get("class", ""), 0),
+            mappings['species'].get(species_name, 0),
+            entry.get("position", {}).get("x", 0.0),
+            entry.get("position", {}).get("y", 0.0),
+            entry.get("position", {}).get("z", 0.0),
+            entry.get("hunger", 0.0),
+            entry.get("water", 0.0),
+            entry.get("sleep", 0.0),
+            entry.get("gender", 0.0),
+            np.array(entry.get("mood", [0, 0, 0, 0]), dtype='f4'),
+            entry.get("generation", 0),
+            entry.get("family_id", 0),
+            entry.get("energy", 0.0),
+            entry.get("age", 0),
+            np.array(entry.get("color1", [0, 0, 0]), dtype='f4'),
+            np.array(entry.get("color2", [0, 0, 0]), dtype='f4'),
+            entry.get("reproduction_rate", 0.0),
+            entry.get("aggression", 0.0),
+            entry.get("mutation_rate", 0.0),
+            mappings['music_taste'].get(entry.get("music_taste", ""), 0)
+        ))
+
+    # Convert to NumPy structured array
+    arr = np.array(data, dtype=dtype)
+
+    return arr, mappings, model_data
+
+with open("species_config.json", "r") as f:
+    config = json.load(f)
+
+species_array, categorical_mappings, model_data = convert_species_config_with_categorical(config)
+
+print(species_array)
+print("Categorical mappings:", categorical_mappings)
+print("Model data:", model_data)
+
+
 class EcoSim:
     """
     A framework for an ecosystem simulation that updates LivingEntities (plants or animals)
     in a 3D space based on a terrain heightmap. Uses NumPy for optimized calculations.
     """
 
-    def __init__(self, heightmap_func, num_entities, world_size):
+    def __init__(self, heightmap_func, world_size):
         """
         Initializes the simulation.
 
@@ -71,18 +170,20 @@ class EcoSim:
         """
         self.heightmap_func = heightmap_func
         self.world_size = world_size
+        self.entities = []
+        self.num_entities = len(self.entities)
 
         # Define a structured array to hold entity data:
         # Fields: x, y, z for position; vx, vy, vz for velocity; species (0: plant, 1: animal)
         dtype = [('x', 'f4'), ('y', 'f4'), ('z', 'f4'),
                  ('vx', 'f4'), ('vy', 'f4'), ('vz', 'f4'),
                  ('species', 'i4')]
-        self.entities = np.zeros(num_entities, dtype=dtype)
+        self.entities = np.zeros(self.num_entities, dtype=dtype)
 
         # Randomly initialize x and z positions
         half_size = world_size / 2
-        xs = np.random.uniform(-half_size, half_size, num_entities)
-        zs = np.random.uniform(-half_size, half_size, num_entities)
+        xs = np.random.uniform(-half_size, half_size, self.num_entities)
+        zs = np.random.uniform(-half_size, half_size, self.num_entities)
         ys = self.heightmap_func(xs, zs)  # Ensure correct alignment with the terrain
 
         self.entities['x'] = xs
@@ -90,13 +191,13 @@ class EcoSim:
         self.entities['z'] = zs
 
         # Randomly assign species: for instance, 0 = plant (static) and 1 = animal (mobile)
-        species = np.random.randint(0, 2, num_entities)
+        species = np.random.randint(0, 2, self.num_entities)
         self.entities['species'] = species
 
         # Initialize velocities: animals get random initial velocities; plants remain static
-        self.entities['vx'] = np.where(species == 1, np.random.uniform(-1, 1, num_entities), 0)
-        self.entities['vy'] = np.where(species == 1, np.random.uniform(-1, 1, num_entities), 0)
-        self.entities['vz'] = np.where(species == 1, np.random.uniform(-1, 1, num_entities), 0)
+        self.entities['vx'] = np.where(species == 1, np.random.uniform(-1, 1, self.num_entities), 0)
+        self.entities['vy'] = np.where(species == 1, np.random.uniform(-1, 1, self.num_entities), 0)
+        self.entities['vz'] = np.where(species == 1, np.random.uniform(-1, 1, self.num_entities), 0)
 
     def step(self, dt):
         """

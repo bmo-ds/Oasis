@@ -1,44 +1,84 @@
 {
-  "species_grid": [
-    {
-      "class": "Empty",
-      "species": "None",
-      "position": {
-        "x": 0.0,
-        "y": 0.0,
-        "z": 0.0
-      },
-      "hunger": 0.0,
-      "water": 0.0,
-      "sleep": 0.0,
-      "gender": 0.0,
-      "mood": [0, 0, 0, 0],
-      "generation": 0,
-      "family_id": 0,
-      "energy": 0.0,
-      "age": 0,
-      "color1": [0.3,0.5,0.5],
-      "color2": [0.7,0.1,0.6],
-      "reproduction_rate": 0.0,
-      "aggression": 0.0,
-      "mutation_rate": 0.0,
-      "music_taste": "",
+  "species_templates": {
+    "Rabbit": {
+      "class": "Mammal",
+      "type": "Prey",
+      "base_hunger": 0.3,
+      "base_water": 0.5,
+      "base_sleep": 0.4,
+      "base_energy": 7.0,
+      "base_aggression": 0.2,
+      "base_mutation_rate": 0.05,
+      "base_age_decay_factor": 0.1,
+      "base_reproduction_rate": 0.7,
       "geometry": {
-        "part1": {
-          "model": "",
-          "color": "",
-          "initial_scale": [0.0, 0.0, 0.0],
-          "max_scale": [0.0, 0.0, 0.0],
-          "position": [0.0, 0.0, 0.0]
-        },
-        "part2": {
-          "model": "",
-          "color": "",
-          "initial_scale": [0.0, 0.0, 0.0],
-          "max_scale": [0.0, 0.0, 0.0],
-          "position": [0.0, 0.0, 0.0]
-        }
+        "part1": { "model": "cube", "color": "red" },
+        "part2": { "model": "cube", "color": "white" }
+      }
+    },
+    "Pine": {
+      "class": "Plant",
+      "type": "Tree",
+      "base_hunger": 0.3,
+      "base_water": 0.8,
+      "base_sleep": 0.4,
+      "base_energy": 7.0,
+      "base_aggression": 0.2,
+      "base_mutation_rate": 0.05,
+      "base_age_decay_factor": 0.02,
+      "base_reproduction_rate": 0.1,
+      "geometry": {
+        "part1": { "model": "cube", "color": "brown" },
+        "part2": { "model": "cube", "color": "green" }
+      }
+    },
+    "Wolf": {
+      "class": "Mammal",
+      "type": "Predator",
+      "base_hunger": 0.6,
+      "base_water": 0.4,
+      "base_sleep": 0.6,
+      "base_energy": 5.0,
+      "base_aggression": 0.8,
+      "base_mutation_rate": 0.05,
+      "base_age_decay_factor": 0.3,
+      "base_reproduction_rate": 0.1,
+      "geometry": {
+        "part1": { "model": "cube", "color": "blue" },
+        "part2": { "model": "cube", "color": "white" }
+      }
+    },
+    "Fox": {
+      "class": "Mammal",
+      "type": "Predator",
+      "base_hunger": 0.5,
+      "base_water": 0.5,
+      "base_sleep": 0.5,
+      "base_energy": 6.0,
+      "base_aggression": 0.6,
+      "base_mutation_rate": 0.04,
+      "base_age_decay_factor": 0.25,
+      "base_reproduction_rate": 0.2,
+      "geometry": {
+        "part1": { "model": "cube", "color": "orange" },
+        "part2": { "model": "cube", "color": "white" }
+      }
+    },
+    "Berry Bush": {
+      "class": "Plant",
+      "type": "Food Source",
+      "base_hunger": 0.2,
+      "base_water": 0.7,
+      "base_sleep": 0.4,
+      "base_energy": 6.5,
+      "base_aggression": 0.0,
+      "base_mutation_rate": 0.03,
+      "base_age_decay_factor": 0.05,
+      "base_reproduction_rate": 0.3,
+      "geometry": {
+        "part1": { "model": "cube", "color": "green" },
+        "part2": { "model": "cube", "color": "red" }
       }
     }
-  ]
+  }
 }

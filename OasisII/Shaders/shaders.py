@@ -274,3 +274,54 @@ water_shader = Shader(
     }
     '''
 )
+
+hologram = Shader(
+# Vertex shader
+vertex_shader = """
+#version 330 core
+#define MAX_INSTANCES 10000
+
+layout(location = 0) in vec3 in_position;
+layout(location = 1) in int in_model_type;
+layout(location = 2) in vec3 in_color;
+
+uniform vec3 instance_offset[MAX_INSTANCES];
+uniform int instance_model_type[MAX_INSTANCES];
+uniform vec3 instance_color[MAX_INSTANCES];
+
+out vec3 fragColor;
+out vec3 fragPos;  // <-- Add this output
+
+void main() {
+    int instanceID = gl_InstanceID;
+    vec3 pos = in_position + instance_offset[instanceID];
+    fragPos = pos;  // Pass the computed position to the fragment shader
+    fragColor = instance_color[instanceID];
+
+    // For now, we just output the same for all shapes.
+    gl_Position = vec4(pos, 1.0);
+}
+
+""",
+# Fragment shader
+fragment_shader = """
+#version 430
+#define MAX_INSTANCES 10000
+
+in vec3 fragColor;
+in vec3 fragPos;
+
+out vec4 color;
+
+uniform float time;
+
+void main() {
+    // Create a scanline effect using sine waves.
+    float scanline = sin(fragPos.y * 20.0 + time * 5.0) * 0.1 + 0.9;
+    // Create a pulsing glow effect.
+    float glow = 0.5 + 0.5 * sin(time * 2.0);
+    color = vec4(fragColor * scanline * glow, 0.5); // Semi-transparent output.
+}
+
+"""
+)
